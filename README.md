@@ -241,6 +241,7 @@ uv run pytest tests/performance/ -m "not slow"
 - **Performance Tests**: Load and scalability testing
 - **Contract Tests**: API and MCP interface compliance
 - **Evaluation Tests**: Best-of-N selector and LLM judge testing
+- **Real LLM Tests**: Production testing with actual API calls and cost management
 
 ### Best-of-N Selector Testing
 
@@ -256,7 +257,26 @@ OPENAI_API_KEY=test-key uv run python tests/evaluation/test_best_of_n_simple.py
 
 # Interactive demo with real models
 OPENAI_API_KEY=your-real-key uv run python examples/demo_best_of_n_selection.py
+
+# Real LLM evaluation tests (uses actual API calls)
+OPENAI_API_KEY=your-real-key uv run python tests/evaluation/test_best_of_n_real_llm.py
+
+# Interactive real LLM evaluation demo
+OPENAI_API_KEY=your-real-key uv run python examples/demo_real_llm_evaluation.py
+
+# Run with pytest (marked as slow test)
+OPENAI_API_KEY=your-real-key uv run pytest tests/evaluation/test_best_of_n_real_llm.py -v -s -m slow
 ```
+
+#### Real LLM Evaluation Features
+- **PydanticEvals Integration**: Official evaluation framework with structured datasets
+- **Multiple Test Scenarios**: Enterprise CRM ($100k-300k), Startup MVP ($25k-75k), Healthcare Compliance
+- **Custom Quality Evaluators**: BestOfNQualityEvaluator and ProposalQualityEvaluator
+- **LLM Judge Assessment**: Real LLM evaluation with domain-specific rubrics
+- **Cost Management**: Uses gpt-4o-mini, limits parallel calls, provides cost warnings
+- **Safety Features**: API key validation, user confirmation prompts, automatic skipping
+- **Comprehensive Output**: Detailed analysis with scores, reasoning, and proposal metrics
+- **Accurate Timing**: Custom timing measurements (PydanticEvals duration display disabled due to bug)
 
 #### Testing Features
 - ✅ **Multiple candidate generation** with parallel execution
@@ -265,6 +285,10 @@ OPENAI_API_KEY=your-real-key uv run python examples/demo_best_of_n_selection.py
 - ✅ **Confidence scoring** based on score distribution
 - ✅ **Performance testing** (3000+ candidates/second with TestModel)
 - ✅ **Error handling and timeouts** with graceful degradation
+- ✅ **Real LLM evaluation** with actual API calls using PydanticEvals framework
+- ✅ **Production testing** with cost management and safety features
+- ✅ **Multiple test scenarios** (Enterprise, Startup, Healthcare)
+- ✅ **Custom evaluators** for proposal quality assessment
 
 #### Testing Patterns
 ```python

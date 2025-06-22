@@ -35,8 +35,6 @@ from rfq_system.core.interfaces.agent import BaseAgent, AgentContext, AgentStatu
 # Disable real model requests during testing
 models.ALLOW_MODEL_REQUESTS = False
 
-pytestmark = pytest.mark.asyncio
-
 
 class MockAgent(BaseAgent):
     """Mock agent for testing Best-of-N selection."""
@@ -120,6 +118,7 @@ class TestBestOfNSelector:
             session_id="test-session"
         )
     
+    @pytest.mark.asyncio
     async def test_generate_candidates_success(self):
         """Test successful candidate generation."""
         # Create mock agent with different responses
@@ -148,6 +147,7 @@ class TestBestOfNSelector:
             assert candidate.model_used == "mock-model"
             assert candidate.generation_time_ms >= 0
     
+    @pytest.mark.asyncio
     async def test_generate_candidates_with_timeout(self):
         """Test candidate generation with timeout handling."""
         # Create mock agent that takes too long
@@ -168,6 +168,7 @@ class TestBestOfNSelector:
         # Might get 0 candidates due to timeouts, which is expected
         assert isinstance(candidates, list)
     
+    @pytest.mark.asyncio
     async def test_evaluate_candidates_with_test_model(self):
         """Test candidate evaluation using TestModel."""
         candidates = [
@@ -206,6 +207,7 @@ class TestBestOfNSelector:
             assert evaluation.reasoning  # Should have some reasoning
             assert evaluation.evaluation_time_ms >= 0
     
+    @pytest.mark.asyncio
     async def test_select_best_candidate_fallback(self):
         """Test best candidate selection with fallback to highest score."""
         candidates = [
@@ -250,6 +252,7 @@ class TestBestOfNSelector:
         assert best_evaluation.candidate_id == "candidate_1"
         assert best_evaluation.overall_score == 0.9
     
+    @pytest.mark.asyncio
     async def test_calculate_selection_confidence(self):
         """Test selection confidence calculation."""
         # Test with clear winner
@@ -278,6 +281,7 @@ class TestBestOfNSelector:
         confidence_close = self.selector._calculate_selection_confidence(evaluations_close)
         assert confidence_close < confidence  # Lower confidence due to small gap
     
+    @pytest.mark.asyncio
     async def test_full_best_of_n_workflow(self):
         """Test the complete Best-of-N workflow."""
         mock_agent = MockAgent(responses=[
@@ -322,6 +326,7 @@ class TestBestOfNSelector:
         candidate_ids = [c.candidate_id for c in result.all_candidates]
         assert result.best_candidate.candidate_id in candidate_ids
     
+    @pytest.mark.asyncio
     async def test_invalid_criteria_raises_error(self):
         """Test that invalid criteria weights raise an error."""
         mock_agent = MockAgent()
@@ -348,7 +353,7 @@ class TestBestOfNAgent:
     
     def setup_method(self):
         """Set up test fixtures."""
-        self.selector = BestOfNSelector(evaluation_model="test-model")
+        self.selector = BestOfNSelector(evaluation_model="test")
         self.target_agent = MockAgent()
         self.context = AgentContext(
             request_id="test-request",
@@ -362,8 +367,9 @@ class TestBestOfNAgent:
             context=self.context
         )
         
-        self.agent = BestOfNAgent(model="test-model")
+        self.agent = BestOfNAgent(model="test")
     
+    @pytest.mark.asyncio
     async def test_best_of_n_tool_delegation(self):
         """Test Best-of-N agent using tool delegation pattern."""
         # Override all internal agents with TestModel
@@ -391,13 +397,14 @@ class TestBestOfNIntegration:
             enable_detailed_evaluation=True
         )
     
+    @pytest.mark.asyncio
     async def test_rfq_proposal_best_of_n(self):
         """Test Best-of-N selection for RFQ proposal generation."""
         # Mock RFQ proposal agent with different quality responses
         class MockRFQAgent(BaseAgent):
             def __init__(self):
                 self.agent_id = "rfq_proposal_agent"
-                self.model = "test-model"
+                self.model = "test"
                 self.responses = [
                     "Basic proposal: We can build your system for $50k in 6 months.",
                     "Detailed proposal: We offer a comprehensive CRM solution with advanced analytics, custom workflows, and 24/7 support. Our team has 10+ years experience. Timeline: 4 months, Cost: $75k including training and maintenance.",

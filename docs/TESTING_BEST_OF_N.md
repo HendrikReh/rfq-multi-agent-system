@@ -44,7 +44,70 @@ For hands-on testing with real models:
 OPENAI_API_KEY=your-real-key uv run python examples/demo_best_of_n_selection.py
 ```
 
+### 4. Real LLM Evaluation Tests
+
+For comprehensive evaluation using actual LLM API calls with PydanticEvals:
+
+```bash
+# Run real LLM evaluation (WARNING: Uses actual API calls and incurs costs)
+OPENAI_API_KEY=your-real-key uv run python tests/evaluation/test_best_of_n_real_llm.py
+
+# Run with pytest (marked as slow test)
+OPENAI_API_KEY=your-real-key uv run pytest tests/evaluation/test_best_of_n_real_llm.py -v -s -m slow
+
+# Interactive demo with user confirmation
+OPENAI_API_KEY=your-real-key uv run python examples/demo_real_llm_evaluation.py
+```
+
 ## Test Categories
+
+### Real LLM Evaluation Tests
+
+The `test_best_of_n_real_llm.py` module provides comprehensive evaluation using actual LLM API calls:
+
+#### Features
+- **PydanticEvals Integration**: Uses the official PydanticAI evaluation framework
+- **Multiple Test Cases**: Enterprise CRM, Startup MVP, Healthcare Compliance scenarios
+- **Custom Evaluators**: Quality-focused evaluators for proposal assessment
+- **LLM Judge Evaluation**: Real LLM-based evaluation with structured rubrics
+- **Cost Management**: Configurable to minimize API costs while maintaining test coverage
+
+#### Test Structure
+```python
+# Real RFQ agent with quality variations
+class RealRFQAgent(BaseAgent):
+    def __init__(self, quality_bias: str = "balanced"):
+        # Different system prompts for quality variation
+        self.system_prompts = {
+            "high_quality": "Expert proposal writer with 15+ years...",
+            "medium_quality": "Competent proposal writer...",
+            "basic_quality": "Simple proposal creation...",
+            "balanced": "Professional balanced approach..."
+        }
+
+# Custom evaluators for Best-of-N quality
+class BestOfNQualityEvaluator(Evaluator[RFQInput, BestOfNResult]):
+    def evaluate(self, ctx: EvaluatorContext) -> float:
+        # Evaluate candidate count, confidence, selection logic
+        # Return score 0.0-1.0
+
+# PydanticEvals dataset with real scenarios
+best_of_n_real_dataset = Dataset[RFQInput, BestOfNResult, Any](
+    cases=[enterprise_crm, startup_mvp, healthcare_compliance],
+    evaluators=[
+        IsInstance(type_name='BestOfNResult'),
+        BestOfNQualityEvaluator(),
+        ProposalQualityEvaluator(),
+        LLMJudge(rubric="Quality assessment...", model="openai:gpt-4o-mini")
+    ]
+)
+```
+
+#### Cost Management
+- Uses `gpt-4o-mini` for cost efficiency
+- Limits parallel generations to 3 candidates
+- Provides clear warnings about API costs
+- Skips tests when no real API key is provided
 
 ### Core Functionality Tests
 
