@@ -26,7 +26,12 @@
 
 # RFQ Multi-Agent System
 
-A production-ready multi-agent system for Request for Quote (RFQ) processing built with [PydanticAI](https://ai.pydantic.dev/), featuring FastAPI integration and MCP support.
+**Home Project #1**
+
+**Course:** https://maven.com/will-brown-kyle-corbitt/agents-mcp-rl
+
+A multi-agent system that intelligently processes Request for Quote (RFQ) inquiries.
+The system analyzes customer requirements, makes strategic decisions about when to ask clarifying questions, and generates (accurate)  quotes.
 
 ## Overview
 
