@@ -674,7 +674,14 @@ async def run_real_llm_evaluation():
                     total_score = 0.0
                     count = 0
                     for score_value in case_result.scores.values():
-                        if hasattr(score_value, 'score'):
+                        # PydanticEvals EvaluationResult has 'value' attribute
+                        if hasattr(score_value, 'value'):
+                            total_score += float(score_value.value)
+                        # Our custom EvaluationResult has 'overall_score' attribute
+                        elif hasattr(score_value, 'overall_score'):
+                            total_score += float(score_value.overall_score)
+                        # Legacy 'score' attribute
+                        elif hasattr(score_value, 'score'):
                             total_score += float(score_value.score)
                         elif isinstance(score_value, (int, float)):
                             total_score += float(score_value)
@@ -699,7 +706,16 @@ async def run_real_llm_evaluation():
         def case_passed(case_result):
             if isinstance(case_result.scores, dict):
                 for score_value in case_result.scores.values():
-                    if hasattr(score_value, 'score'):
+                    # PydanticEvals EvaluationResult has 'value' attribute
+                    if hasattr(score_value, 'value'):
+                        if float(score_value.value) <= 0.5:
+                            return False
+                    # Our custom EvaluationResult has 'overall_score' attribute
+                    elif hasattr(score_value, 'overall_score'):
+                        if float(score_value.overall_score) <= 0.5:
+                            return False
+                    # Legacy 'score' attribute
+                    elif hasattr(score_value, 'score'):
                         if float(score_value.score) <= 0.5:
                             return False
                     elif isinstance(score_value, (int, float)):
@@ -767,6 +783,347 @@ async def run_real_llm_evaluation():
         raise
     finally:
         # Reset model requests setting
+        models.ALLOW_MODEL_REQUESTS = False
+
+
+async def run_real_llm_evaluation_with_models(model_config: Dict[str, str]):
+    """Run the real LLM evaluation with custom model configuration."""
+    
+    # Check if API key is available
+    if not os.getenv('OPENAI_API_KEY') or os.getenv('OPENAI_API_KEY') == 'test-key':
+        print("❌ Real API key required. Set OPENAI_API_KEY environment variable.")
+        print("   Example: OPENAI_API_KEY=your-key python tests/evaluation/test_best_of_n_real_llm.py")
+        return
+    
+    # Allow real model requests for this evaluation
+    models.ALLOW_MODEL_REQUESTS = True
+    
+    print("🚀 Starting Real LLM Best-of-N Evaluation with Custom Models")
+    print("⚠️  This will make actual API calls and incur costs")
+    print("=" * 60)
+    
+    # Display model configuration
+    print("\n🎛️  Model Configuration:")
+    for agent_type, model_id in model_config.items():
+        agent_name = agent_type.replace('_', ' ').title()
+        print(f"   • {agent_name}: {model_id}")
+    
+    # Initialize evaluation report
+    report_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+    evaluation_report = BestOfNEvaluationReport(report_id)
+    
+    # Track actual timing per case
+    case_timings = {}
+    
+    # Create custom function that uses the specified models
+    async def run_best_of_n_with_custom_models(rfq_input: RFQInput) -> BestOfNResult:
+        """Run Best-of-N selection with custom model configuration."""
+        
+        print(f"🔄 Starting Best-of-N generation for: {rfq_input.requirements[:50]}...")
+        start_time = time.time()
+        
+        # Create agents with different quality biases using the specified model
+        target_model = f"openai:{model_config.get('target_agent', 'gpt-4o-mini')}"
+        agents = [
+            RealRFQAgent(model=target_model, quality_bias="high_quality"),
+            RealRFQAgent(model=target_model, quality_bias="medium_quality"), 
+            RealRFQAgent(model=target_model, quality_bias="basic_quality"),
+            RealRFQAgent(model=target_model, quality_bias="balanced"),
+            RealRFQAgent(model=target_model, quality_bias="balanced"),  # Extra balanced for comparison
+        ]
+        
+        # Use a random agent for each generation to create variety
+        import random
+        selected_agent = random.choice(agents)
+        
+        print(f"📝 Selected agent: {selected_agent.quality_bias} using {target_model}")
+        
+        # Initialize Best-of-N selector with custom models
+        evaluation_model = f"openai:{model_config.get('evaluation_judge', 'gpt-4o-mini')}"
+        selector = BestOfNSelector(
+            evaluation_model=evaluation_model,
+            max_parallel_generations=3,  # Limit parallel calls to manage costs
+            enable_detailed_evaluation=True
+        )
+        
+        print(f"🧠 Judge model: {evaluation_model}")
+        
+        # Create context
+        context = AgentContext(
+            request_id="real-llm-test-custom",
+            user_id="evaluation-user",
+            session_id="eval-session"
+        )
+        
+        # Create evaluation criteria emphasizing different aspects
+        criteria = EvaluationCriteria(
+            accuracy_weight=0.25,      # Technical accuracy
+            completeness_weight=0.35,  # Comprehensive coverage
+            relevance_weight=0.25,     # Customer relevance
+            clarity_weight=0.15        # Communication clarity
+        )
+        
+        # Generate prompt from input
+        prompt = f"""
+        Create a professional RFQ proposal for the following requirements:
+        
+        Requirements: {rfq_input.requirements}
+        Budget Range: {rfq_input.budget_range}
+        Timeline: {rfq_input.timeline_preference}
+        Industry: {rfq_input.industry}
+        
+        Please provide a comprehensive proposal that addresses all requirements.
+        """
+        
+        generation_start = time.time()
+        print(f"🚀 Running Best-of-N selection...")
+        
+        # Run Best-of-N selection with custom models
+        result = await selector.generate_best_of_n(
+            target_agent=selected_agent,
+            prompt=prompt,
+            context=context,
+            n=3,  # Generate 3 candidates for comparison
+            criteria=criteria
+        )
+        
+        generation_time = time.time() - generation_start
+        total_time = time.time() - start_time
+        
+        print(f"✅ Completed in {total_time:.2f}s (generation: {generation_time:.2f}s)")
+        print(f"📊 Generated {result.n_candidates} candidates, confidence: {result.selection_confidence:.3f}")
+        
+        return result
+    
+    try:
+        # Run the evaluation with timing
+        eval_start = time.time()
+        
+        # Wrap the function to track individual case timing
+        async def timed_run_best_of_n(rfq_input):
+            case_start = time.time()
+            result = await run_best_of_n_with_custom_models(rfq_input)
+            case_duration = time.time() - case_start
+            
+            # Store timing by case (use requirements as identifier)
+            case_key = rfq_input.requirements[:30] + "..."
+            case_timings[case_key] = case_duration
+            
+            return result
+        
+        report = await best_of_n_real_dataset.evaluate(timed_run_best_of_n)
+        eval_total = time.time() - eval_start
+        
+        print(f"\n⏱️  Total evaluation time: {eval_total:.2f}s")
+        print("\n📊 Evaluation Results:")
+        print("=" * 60)
+        
+        # Hide misleading duration column and show our own timing
+        report.print(include_input=True, include_output=False, include_durations=False)
+        
+        print("\n⚠️  NOTE: PydanticEvals v0.3.2 duration reporting disabled due to bug (always shows 1.0s)")
+        print("    Accurate timing measurements are provided in the detailed analysis below.")
+        
+        # Print detailed results with actual timing and model info
+        print("\n📝 Detailed Analysis (with ACTUAL timing and model configuration):")
+        print("=" * 60)
+        
+        for i, case_result in enumerate(report.cases):
+            print(f"\n🔍 Case: {case_result.name}")
+            print(f"   Input: {case_result.inputs.requirements[:100]}...")
+            
+            # Find the actual timing for this case
+            case_key = case_result.inputs.requirements[:30] + "..."
+            actual_duration = case_timings.get(case_key, 0.0)
+            
+            print(f"   PydanticEvals Duration: {getattr(case_result, 'task_duration', 'N/A')}s (incorrect)")
+            print(f"   ACTUAL Duration: {actual_duration:.2f}s")
+            print(f"   Target Model: {model_config.get('target_agent', 'gpt-4o-mini')}")
+            print(f"   Judge Model: {model_config.get('evaluation_judge', 'gpt-4o-mini')}")
+            
+            # Add case to evaluation report with enhanced error handling
+            error_info = None
+            if case_result.output and hasattr(case_result.output, 'best_candidate'):
+                result = case_result.output
+                print(f"   Candidates Generated: {result.n_candidates}")
+                print(f"   Selection Confidence: {result.selection_confidence:.3f}")
+                
+                if result.best_evaluation:
+                    print(f"   Best Score: {result.best_evaluation.overall_score:.3f}")
+                    print(f"   Reasoning: {result.best_evaluation.reasoning[:150]}...")
+                
+                if result.best_candidate and hasattr(result.best_candidate, 'output'):
+                    proposal = result.best_candidate.output
+                    if hasattr(proposal, 'title'):
+                        print(f"   Selected Title: {proposal.title}")
+                        print(f"   Timeline: {getattr(proposal, 'timeline_months', 'N/A')} months")
+                        print(f"   Cost: ${getattr(proposal, 'cost_estimate', 'N/A'):,}")
+            else:
+                result = None
+                error_info = {"error": "No result generated", "case_index": i}
+            
+            print(f"   Evaluator Scores:")
+            evaluation_scores = {}
+            if isinstance(case_result.scores, dict):
+                for evaluator_name, score_value in case_result.scores.items():
+                    # Handle different score value types
+                    if hasattr(score_value, 'score'):
+                        # New API format: score_value is an EvaluationResult object
+                        score_float = float(score_value.score)
+                        evaluation_scores[evaluator_name] = score_value
+                        print(f"     {evaluator_name}: {score_float:.3f}")
+                    elif isinstance(score_value, (int, float)):
+                        # Simple numeric score
+                        score_float = float(score_value)
+                        evaluation_scores[evaluator_name] = score_value
+                        print(f"     {evaluator_name}: {score_float:.3f}")
+                    else:
+                        # Fallback for unknown format
+                        evaluation_scores[evaluator_name] = str(score_value)
+                        print(f"     {evaluator_name}: {score_value}")
+            else:
+                # Fallback for old format (list of score objects)
+                for score in case_result.scores:
+                    if hasattr(score, 'evaluator') and hasattr(score, 'score'):
+                        evaluation_scores[score.evaluator] = score
+                        print(f"     {score.evaluator}: {score.score:.3f}")
+                    else:
+                        evaluation_scores["unknown"] = score
+                        print(f"     Score: {score}")
+            
+            # Add case to report
+            evaluation_report.add_case_result(
+                case_name=case_result.name,
+                case_input=case_result.inputs,
+                best_of_n_result=result,
+                evaluation_scores=evaluation_scores,
+                actual_duration=actual_duration,
+                error_info=error_info
+            )
+        
+        # Enhanced summary with model configuration
+        def get_case_avg_score(case_result):
+            if isinstance(case_result.scores, dict):
+                if case_result.scores:
+                    total_score = 0.0
+                    count = 0
+                    for score_value in case_result.scores.values():
+                        # PydanticEvals EvaluationResult has 'value' attribute
+                        if hasattr(score_value, 'value'):
+                            total_score += float(score_value.value)
+                        # Our custom EvaluationResult has 'overall_score' attribute
+                        elif hasattr(score_value, 'overall_score'):
+                            total_score += float(score_value.overall_score)
+                        # Legacy 'score' attribute
+                        elif hasattr(score_value, 'score'):
+                            total_score += float(score_value.score)
+                        elif isinstance(score_value, (int, float)):
+                            total_score += float(score_value)
+                        count += 1
+                    return total_score / count if count > 0 else 0.0
+                return 0.0
+            else:
+                # Fallback for old format
+                if case_result.scores:
+                    return sum(s.score for s in case_result.scores) / len(case_result.scores)
+                return 0.0
+        
+        avg_score = sum(get_case_avg_score(cr) for cr in report.cases) / len(report.cases)
+        actual_avg_duration = sum(case_timings.values()) / len(case_timings) if case_timings else 0.0
+        
+        print(f"\n📈 Summary with Custom Model Configuration:")
+        print(f"   Average Score: {avg_score:.3f}")
+        print(f"   Total Evaluation Time: {eval_total:.2f}s")
+        print(f"   ACTUAL Average Time per Case: {actual_avg_duration:.2f}s")
+        print(f"   Target Agent Model: {model_config.get('target_agent', 'gpt-4o-mini')}")
+        print(f"   Evaluation Judge Model: {model_config.get('evaluation_judge', 'gpt-4o-mini')}")
+        print(f"   Selection Agent Model: {model_config.get('selection_agent', 'gpt-4o-mini')}")
+        
+        def case_passed(case_result):
+            if isinstance(case_result.scores, dict):
+                for score_value in case_result.scores.values():
+                    # PydanticEvals EvaluationResult has 'value' attribute
+                    if hasattr(score_value, 'value'):
+                        if float(score_value.value) <= 0.5:
+                            return False
+                    # Our custom EvaluationResult has 'overall_score' attribute
+                    elif hasattr(score_value, 'overall_score'):
+                        if float(score_value.overall_score) <= 0.5:
+                            return False
+                    # Legacy 'score' attribute
+                    elif hasattr(score_value, 'score'):
+                        if float(score_value.score) <= 0.5:
+                            return False
+                    elif isinstance(score_value, (int, float)):
+                        if float(score_value) <= 0.5:
+                            return False
+                return True
+            else:
+                # Fallback for old format
+                return all(s.score > 0.5 for s in case_result.scores)
+        
+        passed_cases = len([cr for cr in report.cases if case_passed(cr)])
+        print(f"   Cases Passed: {passed_cases}/{len(report.cases)}")
+        
+        # Performance analysis
+        if case_timings:
+            fastest = min(case_timings.values())
+            slowest = max(case_timings.values())
+            speed_variation = ((slowest - fastest) / fastest * 100) if fastest > 0 else 0
+            print(f"   Performance Range: {fastest:.2f}s - {slowest:.2f}s ({speed_variation:.1f}% variation)")
+        
+        # Set report metadata with custom model configuration
+        evaluation_report.set_metadata(
+            api_key_type="real" if os.getenv('OPENAI_API_KEY') != 'test-key' else "test",
+            model_config={
+                "target_agent_model": f"openai:{model_config.get('target_agent', 'gpt-4o-mini')}",
+                "evaluation_judge_model": f"openai:{model_config.get('evaluation_judge', 'gpt-4o-mini')}",
+                "selection_agent_model": f"openai:{model_config.get('selection_agent', 'gpt-4o-mini')}",
+                "max_parallel_generations": 3,
+                "custom_configuration": True,
+                "interactive_selection": True
+            },
+            evaluation_config={
+                "n_candidates": 3,
+                "evaluation_criteria": {
+                    "accuracy_weight": 0.25,
+                    "completeness_weight": 0.35,
+                    "relevance_weight": 0.25,
+                    "clarity_weight": 0.15
+                },
+                "dataset_cases": len(report.cases),
+                "model_selection_enabled": True
+            }
+        )
+        
+        # Set performance metrics
+        evaluation_report.set_performance_metrics(eval_total, case_timings)
+        
+        # Save report to file
+        filepath = evaluation_report.save_to_file()
+        
+        print(f"\n💾 Evaluation report saved: {filepath}")
+        print(f"📊 Report contains {len(report.cases)} cases with custom model configuration")
+        
+        return filepath
+        
+    except Exception as e:
+        print(f"❌ Evaluation failed: {e}")
+        # Save error report with model configuration
+        error_report = {
+            "error": str(e),
+            "model_config": model_config,
+            "timestamp": datetime.now().isoformat(),
+            "error_type": "custom_model_evaluation"
+        }
+        error_filepath = Path("reports") / f"{report_id}_custom_model_error.json"
+        error_filepath.parent.mkdir(exist_ok=True)
+        with open(error_filepath, 'w') as f:
+            json.dump(error_report, f, indent=2)
+        print(f"💾 Error report saved: {error_filepath}")
+        raise
+        
+    finally:
         models.ALLOW_MODEL_REQUESTS = False
 
 

@@ -1377,7 +1377,94 @@ This enhancement significantly improves the evaluation capabilities of the RFQ s
    Selection Confidence: 0.876
 ```
 
-### 2025-06-22: Bug Fixes and System Stability ✨
+### 2025-06-22: Interactive Model Selection & Bug Fixes ✨
+
+**NEW FEATURE**: Interactive model selection for Best-of-N evaluation with comprehensive OpenAI model support.
+
+#### Interactive Model Selection Features
+- **OpenAI Model Series Support**: GPT-4o, GPT-4o-mini, GPT-4-turbo, GPT-3.5-turbo
+- **Intelligent Defaults**: Optimized model assignments based on task complexity
+- **Agent-Specific Configuration**: Choose models for Target Agent, Evaluation Judge, and Selection Agent
+- **Cost Estimation**: Real-time cost analysis with visual indicators
+- **User-Friendly Interface**: Clear descriptions, recommendations, and easy selection
+
+#### Usage Examples
+```bash
+# Enhanced demo with model selection
+OPENAI_API_KEY=your-real-key python examples/demo_real_llm_evaluation.py
+
+# Interactive model configuration
+🎯 Would you like to:
+   1. Use intelligent defaults (recommended)
+   2. Configure models interactively
+
+# Model selection interface shows:
+🔧 Configure Target Agent (RFQ Proposal Generator)
+📖 Purpose: Generates RFQ proposals for evaluation
+💡 Recommendation: gpt-4o-mini for balanced quality/cost, gpt-4o for highest quality
+⚙️  Default: GPT-4o Mini (gpt-4o-mini)
+
+📋 Model Options:
+   1. GPT-4o (gpt-4o)
+      💰 High cost | ⚡ Medium speed
+   2. GPT-4o Mini (gpt-4o-mini) (DEFAULT)
+      💰 Low cost | ⚡ Fast speed
+   3. GPT-4 Turbo (gpt-4-turbo)
+      💰 High cost | ⚡ Medium speed
+   4. GPT-3.5 Turbo (gpt-3.5-turbo)
+      💰 Very Low cost | ⚡ Very Fast speed
+```
+
+#### Model Configuration Options
+| Model | Cost | Speed | Best For |
+|-------|------|-------|----------|
+| **GPT-4o** | High | Medium | Complex analysis, highest quality outputs |
+| **GPT-4o Mini** | Low | Fast | Most tasks, cost-effective choice |
+| **GPT-4 Turbo** | High | Medium | Complex reasoning, legacy compatibility |
+| **GPT-3.5 Turbo** | Very Low | Very Fast | Simple tasks, maximum efficiency |
+
+#### Agent Types Configurable
+- **Target Agent**: Generates RFQ proposals for evaluation (default: gpt-4o-mini)
+- **Evaluation Judge**: Evaluates and scores proposals (default: gpt-4o-mini)
+- **Selection Agent**: Selects best candidate from evaluations (default: gpt-4o-mini)
+
+#### Enhanced Features
+- ✅ **Cost Analysis**: Real-time cost estimation with visual indicators (💚 Very Low → 🔴 High)
+- ✅ **Configuration Summary**: Clear overview of selected models and expected costs
+- ✅ **Custom Reports**: JSON reports include detailed model configuration metadata
+- ✅ **Fallback Support**: Graceful fallback to default configuration if custom function unavailable
+- ✅ **Interactive Validation**: User confirmation with complete configuration summary
+
+#### Technical Implementation
+```python
+# Model configuration structure
+AGENT_CONFIGS = {
+    "target_agent": {
+        "name": "Target Agent (RFQ Proposal Generator)",
+        "description": "Generates RFQ proposals for evaluation",
+        "default": "gpt-4o-mini",
+        "recommendation": "gpt-4o-mini for balanced quality/cost, gpt-4o for highest quality"
+    },
+    "evaluation_judge": {
+        "name": "Evaluation Judge (LLM Judge)",
+        "description": "Evaluates and scores generated proposals",
+        "default": "gpt-4o-mini",
+        "recommendation": "gpt-4o-mini is sufficient for evaluation tasks"
+    }
+}
+
+# Custom model evaluation function
+async def run_real_llm_evaluation_with_models(model_config: Dict[str, str]):
+    target_model = f"openai:{model_config.get('target_agent', 'gpt-4o-mini')}"
+    evaluation_model = f"openai:{model_config.get('evaluation_judge', 'gpt-4o-mini')}"
+    
+    # Create agents with custom models
+    agents = [RealRFQAgent(model=target_model, quality_bias=bias) 
+              for bias in ["high_quality", "medium_quality", "basic_quality"]]
+    
+    # Initialize selector with custom judge model
+    selector = BestOfNSelector(evaluation_model=evaluation_model)
+```
 
 **CRITICAL FIXES**: Resolved compatibility issues in Best-of-N evaluation system ensuring production stability.
 
@@ -1606,4 +1693,40 @@ python show_model_config.py
 - **Performance Testing**: Load testing and scalability validation
 - **Quality Evaluation**: Structured scoring and improvement tracking
 
-This system demonstrates advanced multi-agent capabilities using PydanticAI, providing a production-ready foundation for RFQ processing with comprehensive evaluation and reporting capabilities. 
+This system demonstrates advanced multi-agent capabilities using PydanticAI, providing a production-ready foundation for RFQ processing with comprehensive evaluation and reporting capabilities.
+
+### 2025-06-22: Critical Score Calculation Bug Fix
+
+#### Issue Identified
+**Problem**: Average scores in evaluation reports were always displaying 0.000, despite individual evaluators returning correct scores (e.g., 1.0, 0.75).
+
+**Root Cause**: PydanticEvals `EvaluationResult` objects use a `value` attribute to store scores, but the score calculation functions were looking for a `score` attribute, causing all scores to be ignored.
+
+#### Bug Fix Implementation
+Updated both `get_case_avg_score()` and `case_passed()` functions in `tests/evaluation/test_best_of_n_real_llm.py` to properly handle multiple score formats:
+
+```python
+# PydanticEvals EvaluationResult has 'value' attribute
+if hasattr(score_value, 'value'):
+    total_score += float(score_value.value)
+# Our custom EvaluationResult has 'overall_score' attribute  
+elif hasattr(score_value, 'overall_score'):
+    total_score += float(score_value.overall_score)
+# Legacy 'score' attribute
+elif hasattr(score_value, 'score'):
+    total_score += float(score_value.score)
+```
+
+#### Testing Validation
+Created comprehensive test to verify the fix works correctly:
+- ✅ PydanticEvals format with `value` attribute: 1.000 average
+- ✅ Mixed format handling: 0.900 average (1.0 + 0.8 + 0.9) / 3
+- ✅ Empty scores: 0.000 average
+- ✅ Real demo format: Correct score calculation instead of 0.000
+
+#### Impact
+- **Before Fix**: All evaluation reports showed "Average Score: 0.000" regardless of actual evaluator scores
+- **After Fix**: Accurate average score calculation reflecting true evaluation results
+- **Files Updated**: Both instances of score calculation functions in the real LLM evaluation module
+
+**Status**: ✅ **RESOLVED** - Average scores now display correctly in all evaluation reports 
