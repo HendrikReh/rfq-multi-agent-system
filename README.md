@@ -249,7 +249,7 @@ The system includes comprehensive testing for the Best-of-N selector and LLM jud
 #### Quick Testing
 ```bash
 # Run all Best-of-N tests
-OPENAI_API_KEY=test-key uv run pytest tests/unit/test_best_of_n_evaluation.py -v
+OPENAI_API_KEY=test-key uv run pytest tests/unit/test_best_of_n_selector.py -v
 
 # Standalone evaluation script
 OPENAI_API_KEY=test-key uv run python tests/evaluation/test_best_of_n_simple.py

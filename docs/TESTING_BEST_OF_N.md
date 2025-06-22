@@ -19,11 +19,11 @@ The primary testing approach uses pytest with `TestModel` and `FunctionModel` to
 
 ```bash
 # Run all Best-of-N tests
-OPENAI_API_KEY=test-key uv run pytest tests/unit/test_best_of_n_evaluation.py -v
+OPENAI_API_KEY=test-key uv run pytest tests/unit/test_best_of_n_selector.py -v
 
 # Run specific test categories
-uv run pytest tests/unit/test_best_of_n_evaluation.py::TestBestOfNSelector -v
-uv run pytest tests/unit/test_best_of_n_evaluation.py::TestEvaluationCriteria -v
+uv run pytest tests/unit/test_best_of_n_selector.py::TestBestOfNSelector -v
+uv run pytest tests/unit/test_best_of_n_selector.py::TestEvaluationCriteria -v
 ```
 
 ### 2. Simple Evaluation Script
@@ -309,7 +309,7 @@ uv run python test_runner.py
 
 # Run specific test categories
 uv run pytest tests/unit/ -k "best_of_n"
-uv run pytest tests/unit/test_best_of_n_evaluation.py
+uv run pytest tests/unit/test_best_of_n_selector.py
 ```
 
 ### CI/CD Integration

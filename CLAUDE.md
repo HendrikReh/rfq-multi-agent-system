@@ -101,7 +101,6 @@
 **Files Added**:
 - `src/rfq_system/agents/evaluation/best_of_n_selector.py` - Core implementation
 - `tests/unit/test_best_of_n_selector.py` - Comprehensive test suite
-- `tests/evaluation/test_best_of_n_evaluation.py` - Additional evaluation tests
 - `tests/evaluation/test_best_of_n_simple.py` - Standalone evaluation script
 - `examples/demo_best_of_n_selection.py` - Full demonstration with multiple scenarios
 - `docs/TESTING_BEST_OF_N.md` - Comprehensive testing documentation
@@ -816,8 +815,8 @@ pytest tests/performance/ -v        # Performance tests
 
 **New Testing Components**:
 - **tests/evaluation/**: New directory for evaluation-specific tests
-- **test_best_of_n_evaluation.py**: Comprehensive evaluation testing with multiple scenarios
 - **test_best_of_n_simple.py**: Standalone evaluation script for quick testing
+- **tests/unit/test_best_of_n_selector.py**: Comprehensive unit tests with pytest patterns
 - **docs/TESTING_BEST_OF_N.md**: Complete testing documentation and best practices
 
 **Testing Framework Features**:
@@ -855,7 +854,7 @@ with selector._judge_agent.override(model=FunctionModel(mock_judge_evaluation)):
 **Quick Testing Commands**:
 ```bash
 # Run Best-of-N evaluation tests
-OPENAI_API_KEY=test-key uv run pytest tests/unit/test_best_of_n_evaluation.py -v
+OPENAI_API_KEY=test-key uv run pytest tests/unit/test_best_of_n_selector.py -v
 
 # Standalone evaluation script
 OPENAI_API_KEY=test-key uv run python tests/evaluation/test_best_of_n_simple.py
