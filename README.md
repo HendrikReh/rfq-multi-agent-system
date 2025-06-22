@@ -38,28 +38,9 @@ This system demonstrates modern multi-agent architecture patterns inspired by [A
 - **Comprehensive Testing** with unit, integration, and performance tests
 - **Logfire Observability** with complete LLM conversation tracing and performance monitoring
 
-## Architecture
+## Agent Ecosystem
 
-### Core Components
-
-```
-src/rfq_system/
-├── core/                         # Core domain models & interfaces
-├── agents/                       # Agent implementations
-│   ├── base/                     # Base agent classes
-│   ├── core/                     # Core business agents
-│   ├── specialized/              # Domain-specific agents
-│   └── evaluation/               # Evaluation & monitoring
-├── orchestration/                # Multi-agent coordination
-├── tools/                        # Agent tools & utilities
-├── integrations/                 # External service integrations
-├── monitoring/                   # Observability & monitoring
-└── utils/                        # Shared utilities
-```
-
-### Agent Ecosystem
-
-#### Core Processing Agents (9 agents)
+### Core Processing Agents (9 agents)
 - **RFQParser** - Requirements extraction and validation
 - **ConversationStateAgent** - State management and tracking
 - **CustomerIntentAgent** - Sentiment analysis and buying readiness
@@ -70,13 +51,13 @@ src/rfq_system/
 - **CustomerResponseAgent** - Customer simulation and testing
 - **RFQOrchestrator** - Core workflow coordination
 
-#### Specialized Domain Agents (4 agents)
+### Specialized Domain Agents (4 agents)
 - **CompetitiveIntelligenceAgent** - Market positioning and win probability
 - **RiskAssessmentAgent** - 10-point risk scoring across 5 categories
 - **ContractTermsAgent** - Legal terms and compliance management
 - **ProposalWriterAgent** - Professional document generation
 
-#### Evaluation & Quality Assurance
+### Evaluation & Quality Assurance
 - **BestOfNSelector** - Multiple candidate generation with LLM judge evaluation
 - **LLM Judge System** - Structured scoring across accuracy, completeness, relevance, clarity
 - **Confidence Scoring** - Score distribution analysis and quality metrics
