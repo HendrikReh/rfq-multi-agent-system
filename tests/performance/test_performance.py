@@ -29,7 +29,8 @@ from agents.proposal_writer_agent import ProposalDocument
 models.ALLOW_MODEL_REQUESTS = False
 os.environ['OPENAI_API_KEY'] = 'test-key-for-testing'
 
-pytestmark = pytest.mark.anyio
+# Use only asyncio backend to avoid trio dependency issues
+pytestmark = pytest.mark.asyncio
 
 
 class TestParallelExecutionPerformance:
