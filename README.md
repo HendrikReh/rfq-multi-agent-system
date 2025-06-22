@@ -81,3 +81,8 @@ src/rfq_system/
 - **LLM Judge System** - Structured scoring across accuracy, completeness, relevance, clarity
 - **Confidence Scoring** - Score distribution analysis and quality metrics
 
+## RUN THE DEMO
+
+```
+uv run ./examples/demo_real_llm_evaluation.py
+```
