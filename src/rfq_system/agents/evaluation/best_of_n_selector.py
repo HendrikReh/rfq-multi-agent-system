@@ -270,12 +270,21 @@ Return only the candidate_id of your chosen best option."""
         
         # Filter successful candidates
         candidates = []
-        for result in results:
+        failed_count = 0
+        for i, result in enumerate(results):
             if isinstance(result, CandidateOutput):
                 candidates.append(result)
+            elif isinstance(result, GenerationFailed):
+                failed_count += 1
+                print(f"Generation failed for {result.candidate_id}: {result.error_message}")
             elif isinstance(result, Exception):
+                failed_count += 1
                 print(f"Generation failed with exception: {result}")
+            else:
+                failed_count += 1
+                print(f"Unknown result type for candidate {i}: {type(result)}")
         
+        print(f"Generated {len(candidates)} successful candidates, {failed_count} failed")
         return candidates
     
     async def _evaluate_candidates(

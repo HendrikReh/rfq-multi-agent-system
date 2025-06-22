@@ -6,12 +6,13 @@ A production-ready multi-agent system for Request for Quote (RFQ) processing bui
 
 This system demonstrates modern multi-agent architecture patterns inspired by [Anthropic's multi-agent research system](https://www.anthropic.com/engineering/built-multi-agent-research-system), providing:
 
-- **13+ Specialized Agents** for comprehensive RFQ processing
+- **17+ Specialized Agents** for comprehensive RFQ processing
 - **Modular Architecture** with clear separation of concerns
 - **Production Orchestration** with parallel execution and health monitoring
 - **FastAPI Web Service** with complete REST API
 - **MCP Integration** ready for Model Context Protocol
 - **Comprehensive Testing** with unit, integration, and performance tests
+- **🔥 Logfire Observability** with complete LLM conversation tracing and performance monitoring
 
 ## 🏗️ Architecture
 
@@ -85,6 +86,10 @@ cp .env.example .env
 # Edit .env with your API keys
 export OPENAI_API_KEY="your-openai-api-key"
 export ANTHROPIC_API_KEY="your-anthropic-api-key"  # optional
+
+# Set up Logfire observability (optional but recommended)
+uv run logfire auth
+uv run logfire projects use  # or create new project
 ```
 
 ### Basic Usage
@@ -194,6 +199,100 @@ from rfq_system.orchestration.coordinators.graph_based import GraphBasedCoordina
 coordinator = GraphBasedCoordinator()
 await coordinator.execute_state_machine(initial_state, state_graph)
 ```
+
+## 🔥 Logfire Observability
+
+### Complete LLM Conversation Tracing
+
+This system includes comprehensive [Pydantic Logfire](https://logfire.pydantic.dev/) integration for production-grade observability of your multi-agent system:
+
+#### Features
+- **LLM Conversation Tracing**: See every message exchanged between agents and models
+- **Performance Monitoring**: Track response times, token usage, and costs
+- **Error Tracking**: Comprehensive error logging with context
+- **Agent Delegation Visibility**: Trace how agents call other agents
+- **Best-of-N Selection Monitoring**: Detailed evaluation process tracking
+- **Custom Spans and Metrics**: Business-specific observability
+
+#### Setup
+
+```bash
+# Install with Logfire support (already included)
+uv add 'pydantic-ai[logfire]'
+
+# Authenticate with Logfire
+uv run logfire auth
+
+# Create or use existing project
+uv run logfire projects new  # or 'logfire projects use'
+```
+
+#### Usage
+
+The system automatically instruments all PydanticAI agents when Logfire is configured:
+
+```python
+import logfire
+from pydantic_ai import Agent
+
+# Configure Logfire (automatically done in our system)
+logfire.configure()
+
+# Instrument all PydanticAI agents for detailed conversation logging
+logfire.instrument_pydantic_ai(event_mode='logs')
+Agent.instrument_all()
+
+# All agent interactions are now traced!
+result = await coordinator.process_rfq("Build a CRM system")
+```
+
+#### What You'll See in Logfire Dashboard
+
+1. **Agent Execution Spans**
+   - Individual agent processing times
+   - Parallel execution visualization
+   - Error handling and retries
+
+2. **LLM Conversations**
+   - System prompts sent to models
+   - User messages from agents
+   - Model responses with token counts
+   - Tool calls and responses
+
+3. **Best-of-N Selection Process**
+   - Candidate generation timing
+   - LLM judge evaluation details
+   - Selection reasoning and confidence scores
+
+4. **Business Metrics**
+   - RFQ processing success rates
+   - Customer intent analysis results
+   - Risk assessment scores
+   - Proposal generation quality
+
+#### Example Logfire Integration
+
+```python
+# The demo script includes comprehensive Logfire tracing
+from examples.demo_real_llm_evaluation import main
+
+# Run with Logfire tracing enabled
+await main()  # Automatically traces all LLM interactions
+
+# Check your dashboard at: https://logfire.pydantic.dev/your-project
+```
+
+#### Data Privacy & Scrubbing
+
+Logfire automatically scrubs sensitive data:
+- API keys and authentication tokens
+- Personal identifiable information (PII)
+- Credit card numbers and sensitive patterns
+
+The `reasoning` field in evaluation results may show `[Scrubbed due to 'auth']` - this is normal and protects sensitive LLM-generated content while preserving all numerical metrics.
+
+#### Dashboard URL
+Access your traces at: `https://logfire.pydantic.dev/your-project-name`
 
 ## 🔧 Configuration
 
