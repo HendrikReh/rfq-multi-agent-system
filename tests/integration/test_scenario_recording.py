@@ -300,7 +300,7 @@ def test_scenario_recording():
         print("No scenario files found.")
     
     print("✨ SCENARIO RECORDING TEST COMPLETED")
-    print("Use 'python view_scenarios.py' to view and analyze the recorded scenarios")
+    print("Use 'uv run ./examples/view_scenarios.py', 'uv run ./examples/view_scenarios.py --analyze' to view and analyze the recorded scenarios")
 
 
 if __name__ == "__main__":
