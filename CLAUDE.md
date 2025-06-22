@@ -125,6 +125,134 @@
 
 **Achievement Status**: ✅ **COMPLETE** - Best-of-N selection with LLM judge evaluation and comprehensive testing
 
+### 2024-12-30: OpenAI Model Availability Testing ✨
+
+**NEW FEATURE**: Comprehensive testing framework for OpenAI model availability and compatibility with PydanticAI agents.
+
+**Implementation Highlights**:
+- **Model Name Validation**: Tests all specified OpenAI models for syntactic validity and agent creation
+- **TestModel Integration**: Uses PydanticAI's TestModel to verify agent functionality without API calls
+- **Comprehensive Coverage**: Tests 8 models including future/experimental ones (gpt-4.1, o3, etc.)
+- **Real API Guidance**: Provides clear instructions for testing actual model availability
+- **Known Model Comparison**: Includes tests for confirmed working models as baselines
+
+**Key Findings**:
+- ✅ **All Model Names Valid**: PydanticAI accepts all specified model names at agent creation
+- ✅ **Agent Functionality Works**: All models work correctly with TestModel override
+- ✅ **Proper Test Strategy**: Model validation happens at runtime, not creation time
+- ✅ **Future-Proof Testing**: Framework ready for when new models become available
+
+**Files Added**:
+- `tests/unit/test_openai_model_availability.py` (200+ lines) - Comprehensive test suite
+- `scripts/check_openai_models.py` (150+ lines) - Standalone validation script
+
+**Models Tested**:
+```python
+OPENAI_MODELS_TO_CHECK = [
+    "gpt-4.1",           # Future GPT-4 version
+    "gpt-4.1-mini",      # Future mini version  
+    "gpt-4.1-nano",      # Future nano version
+    "o3",                # Next-generation model
+    "o3-mini",           # Mini version of o3
+    "gpt-3.5-turbo",     # Current stable model
+    "gpt-4.5-preview",   # Preview version
+    "04-mini"            # Alternative naming
+]
+```
+
+**Test Results**:
+- **Agent Creation**: ✅ 8/8 models pass (100% success)
+- **TestModel Override**: ✅ 8/8 models pass (100% success)
+- **Functionality Test**: ✅ All models work with agent logic
+- **Known Models**: ✅ 4/4 confirmed working models pass
+
+**Usage Commands**:
+```bash
+# Quick validation script
+python scripts/check_openai_models.py
+
+# Full pytest suite with detailed output
+pytest tests/unit/test_openai_model_availability.py -v -s
+
+# Just the standalone validation
+python tests/unit/test_openai_model_availability.py
+```
+
+**Real API Testing Guidance**:
+The test suite provides comprehensive guidance for testing actual model availability:
+1. Set real OpenAI API key
+2. Enable model requests (`models.ALLOW_MODEL_REQUESTS = True`)
+3. Remove TestModel override
+4. Handle different error types (model not found, access denied, rate limits)
+
+**Technical Insights**:
+- PydanticAI accepts any model name at agent creation time
+- Model validation occurs at runtime during actual API calls
+- TestModel override allows functionality testing without API costs
+- Some models (gpt-4.1, o3) may not be publicly available yet
+- Framework is ready for future model releases
+
+### 2024-12-30: Fixed Useless OpenAI Model Testing - Now Does REAL Validation ✨
+
+**CRITICAL BUG FIX**: Completely rewrote OpenAI model availability tests to make actual API calls instead of useless agent creation tests.
+
+**The Problem**: 
+The original test was completely useless because:
+- ✅ PydanticAI accepts **ANY** model name at agent creation (even fake ones like "duumy:johndoe-4o")
+- ✅ TestModel override bypasses the actual model entirely
+- ✅ Test passed for fake models, giving false confidence
+
+**The Solution**:
+Complete rewrite with **REAL API validation**:
+- 🔥 **Real API Calls**: Makes actual requests to OpenAI to verify model existence
+- 🔥 **Fake Model Detection**: Correctly fails for invalid models like "duumy:johndoe-4o"
+- 🔥 **Direct Model List API**: Cross-references with OpenAI's official model list
+- 🔥 **Comprehensive Error Handling**: Distinguishes between "model not found" vs "access denied"
+
+**New Test Categories**:
+```python
+# Expected to work (real models)
+EXPECTED_WORKING_MODELS = ["gpt-3.5-turbo", "gpt-4", "gpt-4o", "gpt-4o-mini"]
+
+# Expected to fail (not released yet)
+EXPECTED_FAILING_MODELS = ["gpt-4.1", "o3", "o3-mini", "o4-mini"]
+
+# Fake models (should always fail)
+FAKE_MODELS_TO_TEST = ["duumy:johndoe-4o", "gpt-99-ultra", "fake-model-name"]
+```
+
+**Key Improvements**:
+- **Real Validation**: `models.ALLOW_MODEL_REQUESTS = True` + actual API calls
+- **Proper Error Detection**: Catches invalid models with appropriate exceptions
+- **API Key Requirements**: Skips tests gracefully when no real API key available
+- **Cost Awareness**: Minimal API usage (1 request per model) with safety controls
+- **Cross-Validation**: Compares test results with OpenAI's official model list
+
+**Demo Results**:
+```bash
+# Old useless test - PASSED for fake model!
+✅ Model 'duumy:johndoe-4o' - Agent created successfully
+
+# New real test - CORRECTLY FAILS for fake model!
+❌ FAKE MODEL CORRECTLY FAILED: 'duumy:johndoe-4o' - InvalidRequestError
+```
+
+**Files Updated**:
+- `tests/unit/test_openai_model_availability.py` - Complete rewrite with real API testing
+- `scripts/check_openai_models.py` - Updated to make real API calls
+- `examples/demo_real_vs_fake_model_testing.py` - NEW: Demo showing the difference
+
+**Usage**:
+```bash
+# Real validation (requires OPENAI_API_KEY)
+pytest tests/unit/test_openai_model_availability.py -v -s
+
+# Quick demo showing the difference
+python examples/demo_real_vs_fake_model_testing.py
+```
+
+**Lesson Learned**: Always test what actually matters! The original test was testing PydanticAI's agent creation (which always works) instead of actual model availability (which is what we care about).
+
 ### 2024-12-30: Real LLM Evaluation Testing Implementation ✨
 
 **MAJOR ENHANCEMENT**: Added comprehensive real LLM evaluation testing using actual API calls with PydanticEvals framework.

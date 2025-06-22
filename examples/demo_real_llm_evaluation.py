@@ -39,6 +39,27 @@ from pydantic_ai import models
 
 # OpenAI Model Options with descriptions
 OPENAI_MODELS = {
+    "gpt-3.5-turbo": {
+        "name": "GPT-3.5 Turbo",
+        "description": "Fast and economical, good for simpler tasks",
+        "cost": "Very Low",
+        "speed": "Very Fast",
+        "use_case": "Simple tasks, maximum speed/cost efficiency"
+    },
+    "gpt-4": {
+        "name": "GPT-4",
+        "description": "Original GPT-4, high capability",
+        "cost": "High",
+        "speed": "Slow",
+        "use_case": "Complex reasoning, high-quality outputs"
+    },
+    "gpt-4-turbo": {
+        "name": "GPT-4 Turbo",
+        "description": "Previous generation, still very capable",
+        "cost": "High",
+        "speed": "Medium",
+        "use_case": "Complex reasoning, legacy compatibility"
+    },
     "gpt-4o": {
         "name": "GPT-4o",
         "description": "Most capable model, best for complex reasoning",
@@ -53,19 +74,61 @@ OPENAI_MODELS = {
         "speed": "Fast",
         "use_case": "Most tasks, cost-effective choice"
     },
-    "gpt-4-turbo": {
-        "name": "GPT-4 Turbo",
-        "description": "Previous generation, still very capable",
+    "o1-mini": {
+        "name": "o1 Mini",
+        "description": "Reasoning-focused model, mini version",
+        "cost": "Medium",
+        "speed": "Medium",
+        "use_case": "Complex reasoning tasks, cost-effective"
+    },
+    "o1-preview": {
+        "name": "o1 Preview",
+        "description": "Advanced reasoning model (preview version)",
+        "cost": "Very High",
+        "speed": "Slow",
+        "use_case": "Most complex reasoning, research tasks"
+    },
+    "gpt-4.1": {
+        "name": "GPT-4.1",
+        "description": "Future GPT-4 version (may not be available)",
         "cost": "High",
         "speed": "Medium",
-        "use_case": "Complex reasoning, legacy compatibility"
+        "use_case": "Next-generation capabilities"
     },
-    "gpt-3.5-turbo": {
-        "name": "GPT-3.5 Turbo",
-        "description": "Fast and economical, good for simpler tasks",
-        "cost": "Very Low",
+    "gpt-4.1-mini": {
+        "name": "GPT-4.1 Mini",
+        "description": "Future mini version (may not be available)",
+        "cost": "Medium",
+        "speed": "Fast",
+        "use_case": "Future efficient processing"
+    },
+    "gpt-4.1-nano": {
+        "name": "GPT-4.1 Nano",
+        "description": "Future nano version (may not be available)",
+        "cost": "Low",
         "speed": "Very Fast",
-        "use_case": "Simple tasks, maximum speed/cost efficiency"
+        "use_case": "Future ultra-efficient tasks"
+    },
+    "o3": {
+        "name": "o3",
+        "description": "Next-generation reasoning model (may not be available)",
+        "cost": "Very High",
+        "speed": "Slow",
+        "use_case": "Advanced reasoning and research"
+    },
+    "o3-mini": {
+        "name": "o3 Mini",
+        "description": "Efficient reasoning model (may not be available)",
+        "cost": "Medium",
+        "speed": "Medium",
+        "use_case": "Reasoning tasks, cost-effective"
+    },
+    "o4-mini": {
+        "name": "o4 Mini",
+        "description": "Future reasoning model (may not be available)",
+        "cost": "Medium",
+        "speed": "Medium",
+        "use_case": "Future reasoning capabilities"
     }
 }
 
