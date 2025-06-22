@@ -105,7 +105,7 @@ print(f"Confidence: {result.confidence_score}")
 
 ```bash
 # Start the API server
-python -m api.main
+uv run -m api.main
 
 # Or using the CLI
 rfq-api
@@ -118,7 +118,7 @@ open http://localhost:8000/docs
 
 ```bash
 # Start the MCP server
-python -m mcp_server.server
+uv run -m mcp_server.server
 
 # Or using the CLI
 rfq-mcp-server
@@ -195,10 +195,10 @@ export PRICING_STRATEGY_MODEL="claude-3-sonnet"
 pytest
 
 # Using the test runner
-python run_all_tests.py
+uv run run_all_tests.py
 
-# Performance tests
-pytest tests/performance/ -m "not slow"
+# Performance tests (asyncio only, no trio dependency)
+uv run pytest tests/performance/ -m "not slow"
 ```
 
 ### Test Categories
