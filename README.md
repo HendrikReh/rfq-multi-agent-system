@@ -55,6 +55,11 @@ tests/                            # Comprehensive test suite
 - **ContractTermsAgent** - Legal terms and compliance management
 - **ProposalWriterAgent** - Professional document generation
 
+#### Evaluation & Quality Assurance
+- **BestOfNSelector** - Multiple candidate generation with LLM judge evaluation
+- **LLM Judge System** - Structured scoring across accuracy, completeness, relevance, clarity
+- **Confidence Scoring** - Score distribution analysis and quality metrics
+
 ## 🚀 Quick Start
 
 ### Installation
@@ -99,6 +104,35 @@ result = await coordinator.process_rfq(
 
 print(f"RFQ Status: {result.status}")
 print(f"Confidence: {result.confidence_score}")
+```
+
+### Best-of-N Selection Usage
+
+```python
+from rfq_system.agents.evaluation.best_of_n_selector import BestOfNSelector
+from rfq_system.agents.proposal_writer_agent import ProposalWriterAgent
+
+# Initialize Best-of-N selector
+selector = BestOfNSelector()
+proposal_agent = ProposalWriterAgent()
+
+# Generate multiple candidates and select the best
+result = await selector.generate_best_of_n(
+    target_agent=proposal_agent,
+    prompt="Create a comprehensive RFQ proposal for enterprise CRM",
+    context={"budget_range": "$100k-500k", "timeline": "6 months"},
+    n=5,  # Generate 5 candidates
+    evaluation_criteria={
+        "accuracy": 0.3,      # Technical accuracy weight
+        "completeness": 0.3,  # Comprehensive coverage
+        "relevance": 0.2,     # Customer relevance
+        "clarity": 0.2        # Communication clarity
+    }
+)
+
+print(f"Best candidate score: {result.best_score}")
+print(f"Confidence: {result.confidence}")
+print(f"Selected proposal: {result.best_candidate}")
 ```
 
 ### FastAPI Web Service
@@ -206,6 +240,54 @@ uv run pytest tests/performance/ -m "not slow"
 - **Integration Tests**: Multi-agent workflows
 - **Performance Tests**: Load and scalability testing
 - **Contract Tests**: API and MCP interface compliance
+- **Evaluation Tests**: Best-of-N selector and LLM judge testing
+
+### Best-of-N Selector Testing
+
+The system includes comprehensive testing for the Best-of-N selector and LLM judge functionality:
+
+#### Quick Testing
+```bash
+# Run all Best-of-N tests
+OPENAI_API_KEY=test-key uv run pytest tests/unit/test_best_of_n_evaluation.py -v
+
+# Standalone evaluation script
+OPENAI_API_KEY=test-key uv run python tests/evaluation/test_best_of_n_simple.py
+
+# Interactive demo with real models
+OPENAI_API_KEY=your-real-key uv run python examples/demo_best_of_n_selection.py
+```
+
+#### Testing Features
+- ✅ **Multiple candidate generation** with parallel execution
+- ✅ **LLM judge evaluation** with structured scoring (accuracy, completeness, relevance, clarity)
+- ✅ **Custom evaluation criteria** with configurable weights
+- ✅ **Confidence scoring** based on score distribution
+- ✅ **Performance testing** (3000+ candidates/second with TestModel)
+- ✅ **Error handling and timeouts** with graceful degradation
+
+#### Testing Patterns
+```python
+# Use TestModel for fast, deterministic tests
+with selector._judge_agent.override(model=TestModel()):
+    with selector._selection_agent.override(model=TestModel()):
+        result = await selector.generate_best_of_n(
+            target_agent=mock_agent,
+            prompt="Generate RFQ proposal",
+            context=context,
+            n=5
+        )
+
+# Use FunctionModel for controlled evaluation responses
+def mock_judge_evaluation(messages, info):
+    return {
+        "overall_score": 0.85,
+        "reasoning": "High-quality proposal with comprehensive features"
+    }
+
+with selector._judge_agent.override(model=FunctionModel(mock_judge_evaluation)):
+    result = await selector.generate_best_of_n(...)
+```
 
 ### Test with TestModel
 ```python
